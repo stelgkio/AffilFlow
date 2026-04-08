@@ -1,0 +1,141 @@
+basePath: /
+definitions:
+  internal_api_handlers.ErrorResponse:
+    properties:
+      error:
+        properties:
+          code:
+            type: string
+          message:
+            type: string
+        type: object
+    type: object
+  internal_api_handlers.HealthResponse:
+    properties:
+      status:
+        type: string
+    type: object
+  internal_api_handlers.IndexResponse:
+    properties:
+      service:
+        type: string
+      swagger:
+        type: string
+      version:
+        type: string
+    type: object
+  internal_api_handlers.PingResponse:
+    properties:
+      message:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: AffilFlow
+  description: REST API for the AffilFlow affiliate marketing platform (Fiber + PostgreSQL).
+  title: AffilFlow API
+  version: "1.0"
+paths:
+  /:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api_handlers.IndexResponse'
+      summary: Service root
+      tags:
+      - system
+  /api/v1/payouts/run:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_api_handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api_handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api_handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Run affiliate payouts (admin)
+      tags:
+      - payouts
+  /api/v1/ping:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api_handlers.PingResponse'
+      summary: Ping API
+      tags:
+      - api
+  /health:
+    get:
+      description: Kubernetes-style health check
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api_handlers.HealthResponse'
+      summary: Liveness
+      tags:
+      - system
+  /ref/{code}:
+    get:
+      description: Records a click, sets attribution cookie, redirects (302)
+      parameters:
+      - description: Referral code
+        in: path
+        name: code
+        required: true
+        type: string
+      - description: Allowed redirect URL (host must be allowlisted)
+        in: query
+        name: next
+        type: string
+      responses:
+        "302":
+          description: Redirect to REDIRECT_BASE_URL or next
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api_handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api_handlers.ErrorResponse'
+      summary: Referral redirect
+      tags:
+      - referrals
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: 'AffilFlow access token: prefix Authorization with Bearer and a space.'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -1,0 +1,9 @@
+.env
+/tmp/
+*.exe
+/affilflow
+/bin/
+/backend/bin/
+dist/
+web/node_modules/
+web/.next/

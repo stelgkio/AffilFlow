@@ -1,0 +1,44 @@
+# Local stack: Postgres + AffilFlow API (backend-issued JWTs; OAuth via Google/Facebook).
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: affilflow
+      POSTGRES_PASSWORD: affilflow
+      POSTGRES_DB: affilflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - affilflow_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U affilflow -d affilflow"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://affilflow:affilflow@postgres:5432/affilflow?sslmode=disable
+      AUTO_MIGRATE: "true"
+      HTTP_PORT: "8080"
+      JWT_SKIP_VALIDATION: "false"
+      AUTH_JWT_SECRET: dev-only-change-me-use-openssl-rand-hex-32
+      AUTH_PUBLIC_BASE_URL: http://localhost:8080
+      PUBLIC_APP_BASE_URL: http://localhost:3001
+      REDIRECT_ALLOW_HOSTS: localhost:3001
+      # OAuth — set real client IDs/secrets for provider login:
+      # OAUTH_GOOGLE_CLIENT_ID=
+      # OAUTH_GOOGLE_CLIENT_SECRET=
+      # OAUTH_FACEBOOK_CLIENT_ID=
+      # OAUTH_FACEBOOK_CLIENT_SECRET=
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  affilflow_pg:

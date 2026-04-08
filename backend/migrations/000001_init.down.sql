@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS payouts;
+DROP TABLE IF EXISTS commissions;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS referrals;
+DROP TABLE IF EXISTS affiliates;
+DROP TABLE IF EXISTS affiliate_invites;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS subscriptions;
+DROP TABLE IF EXISTS organizations;
+DROP TABLE IF EXISTS subscription_plans;

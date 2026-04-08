@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS auth_identities;
+
+ALTER TABLE users DROP COLUMN IF EXISTS display_name;
+ALTER TABLE users DROP COLUMN IF EXISTS role;

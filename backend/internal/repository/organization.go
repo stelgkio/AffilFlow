@@ -54,6 +54,44 @@ func (r *OrganizationRepository) GetByID(ctx context.Context, id uuid.UUID) (*mo
 	return &o, nil
 }
 
+// GetDiscoverableByID returns an organization only if it exists and discovery is enabled.
+func (r *OrganizationRepository) GetDiscoverableByID(ctx context.Context, id uuid.UUID) (*models.Organization, error) {
+	const q = `
+		SELECT id, name, slug, discovery_enabled, approval_mode, stripe_customer_id, created_at, updated_at
+		FROM organizations WHERE id = $1 AND discovery_enabled = true
+	`
+	var o models.Organization
+	err := r.pool.QueryRow(ctx, q, id).Scan(
+		&o.ID, &o.Name, &o.Slug, &o.DiscoveryEnabled, &o.ApprovalMode, &o.StripeCustomerID, &o.CreatedAt, &o.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &o, nil
+}
+
+// GetDiscoverableBySlug returns an organization by slug only when discovery is enabled.
+func (r *OrganizationRepository) GetDiscoverableBySlug(ctx context.Context, slug string) (*models.Organization, error) {
+	const q = `
+		SELECT id, name, slug, discovery_enabled, approval_mode, stripe_customer_id, created_at, updated_at
+		FROM organizations WHERE slug = $1 AND discovery_enabled = true
+	`
+	var o models.Organization
+	err := r.pool.QueryRow(ctx, q, slug).Scan(
+		&o.ID, &o.Name, &o.Slug, &o.DiscoveryEnabled, &o.ApprovalMode, &o.StripeCustomerID, &o.CreatedAt, &o.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &o, nil
+}
+
 // ListDiscoverable returns orgs with discovery_enabled.
 func (r *OrganizationRepository) ListDiscoverable(ctx context.Context) ([]models.Organization, error) {
 	const q = `

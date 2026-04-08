@@ -39,6 +39,8 @@ func NewFiberApp(cfg *config.Config, h *handlers.Handlers) *fiber.App {
 
 	v1 := app.Group("/api/v1")
 	v1.Get("/ping", h.Ping)
+	v1.Get("/campaigns", h.DirectoryPrograms)
+	v1.Get("/campaigns/:campaignRef", h.CampaignDetail)
 	v1.Get("/directory/programs", h.DirectoryPrograms)
 	v1.Get("/invites/:token/validate", h.InviteValidate)
 
@@ -50,6 +52,7 @@ func NewFiberApp(cfg *config.Config, h *handlers.Handlers) *fiber.App {
 	protected := v1.Group("", middleware.AffilFlowJWT(cfg))
 	protected.Post("/invites/:token/accept", h.InviteAccept)
 	protected.Post("/directory/programs/:orgId/apply", h.DirectoryApply)
+	protected.Post("/campaigns/:orgId/apply", h.DirectoryApply)
 	protected.Post("/onboarding/company", h.OnboardCompany)
 	protected.Post("/auth/logout", h.AuthLogout)
 	protected.Get("/auth/me", h.AuthMe)

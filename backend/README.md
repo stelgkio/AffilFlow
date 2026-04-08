@@ -8,6 +8,12 @@ From this directory (with `.env` at repo root, run from parent shell that alread
 AUTO_MIGRATE=true go run ./cmd
 ```
 
+Seed dummy public campaigns/programs:
+
+```bash
+psql "$DATABASE_URL" -f backend/seeds/demo_campaigns.sql
+```
+
 From the **repository root**: `make run` (recommended — runs this module with cwd `backend/` so `file://migrations` resolves correctly).
 
 - **Docker:** `docker build -f backend/Dockerfile -t affilflow-api backend`

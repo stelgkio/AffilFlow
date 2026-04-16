@@ -90,23 +90,23 @@ func (h *Handlers) AuthRegister(c *fiber.Ctx) error {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	orgID, err := h.Org.CreateTx(ctx, tx, companyName)
+	campainID, err := h.Campain.CreateTx(ctx, tx, companyName, &uid)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 	if h.Sub != nil {
-		if err := h.Sub.CreateFreeTx(ctx, tx, orgID); err != nil {
+		if err := h.Sub.CreateFreeTx(ctx, tx, campainID); err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
 	}
-	if err := h.User.InsertPasswordUserTx(ctx, tx, uid, emailPtr, dispPtr, hashStr, "admin", &orgID); err != nil {
+	if err := h.User.InsertPasswordUserTx(ctx, tx, uid, emailPtr, dispPtr, hashStr, "merchant", &campainID); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
-	orgStr := orgID.String()
-	return h.issueAuthResponse(c, fiber.StatusCreated, uid, []string{"admin"}, &orgStr)
+	campainStr := campainID.String()
+	return h.issueAuthResponse(c, fiber.StatusCreated, uid, []string{"merchant"}, &campainStr)
 }
 
 // AuthLogin POST /api/v1/auth/login — email/password; returns JWT.
@@ -138,7 +138,7 @@ func (h *Handlers) AuthLogin(c *fiber.Ctx) error {
 	return h.issueAuthResponse(c, fiber.StatusOK, u.ID, []string{role}, nil)
 }
 
-func (h *Handlers) issueAuthResponse(c *fiber.Ctx, status int, userID string, roles []string, organizationID *string) error {
+func (h *Handlers) issueAuthResponse(c *fiber.Ctx, status int, userID string, roles []string, campainID *string) error {
 	raw, err := auth.IssueAccessToken(h.Cfg, userID, roles)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
@@ -148,8 +148,8 @@ func (h *Handlers) issueAuthResponse(c *fiber.Ctx, status int, userID string, ro
 		"user_id":      userID,
 		"roles":        roles,
 	}
-	if organizationID != nil {
-		out["organization_id"] = *organizationID
+	if campainID != nil {
+		out["campain_id"] = *campainID
 	}
 	return response.JSON(c, status, out)
 }

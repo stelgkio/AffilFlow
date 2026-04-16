@@ -13,7 +13,7 @@ type onboardCompanyBody struct {
 	Name string `json:"name"`
 }
 
-// OnboardCompany POST /api/v1/onboarding/company — create merchant org and promote user to admin.
+// OnboardCompany POST /api/v1/onboarding/company — create merchant campain and promote user to merchant.
 func (h *Handlers) OnboardCompany(c *fiber.Ctx) error {
 	uid, _ := c.Locals(middleware.LocalUserID).(string)
 	if uid == "" {
@@ -33,31 +33,31 @@ func (h *Handlers) OnboardCompany(c *fiber.Ctx) error {
 	if err != nil || u == nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "user not found")
 	}
-	if u.OrganizationID != nil {
-		return fiber.NewError(fiber.StatusConflict, "user already belongs to an organization")
+	if u.CampainID != nil {
+		return fiber.NewError(fiber.StatusConflict, "user already belongs to a campain")
 	}
 
-	orgID, err := h.Org.Create(ctx, name)
+	campainID, err := h.Campain.Create(ctx, name, &uid)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 	if h.Sub != nil {
-		if err := h.Sub.CreateFree(ctx, orgID); err != nil {
+		if err := h.Sub.CreateFree(ctx, campainID); err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
 	}
-	if err := h.User.SetOrganizationAndRole(ctx, uid, &orgID, "admin"); err != nil {
+	if err := h.User.SetCampainAndRole(ctx, uid, &campainID, "merchant"); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
 	var accessToken string
-	if raw, err := auth.IssueAccessToken(h.Cfg, uid, []string{"admin"}); err == nil {
+	if raw, err := auth.IssueAccessToken(h.Cfg, uid, []string{"merchant"}); err == nil {
 		accessToken = string(raw)
 	}
 
 	return response.JSON(c, 201, fiber.Map{
-		"organization_id": orgID.String(),
-		"role":              "admin",
+		"campain_id":      campainID.String(),
+		"role":              "merchant",
 		"access_token":      accessToken,
 	})
 }

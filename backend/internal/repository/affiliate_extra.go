@@ -10,14 +10,26 @@ import (
 )
 
 // InsertAffiliate creates an affiliate row.
-func (r *AffiliateRepository) Insert(ctx context.Context, orgID uuid.UUID, userID, code string, rate float64) (uuid.UUID, error) {
+func (r *AffiliateRepository) Insert(ctx context.Context, campainID uuid.UUID, userID, code string, rate float64) (uuid.UUID, error) {
 	const q = `
-		INSERT INTO affiliates (organization_id, user_id, code, commission_rate, status, updated_at)
+		INSERT INTO affiliates (campain_id, user_id, code, commission_rate, status, updated_at)
 		VALUES ($1, $2, $3, $4, 'active', now())
 		RETURNING id
 	`
 	var id uuid.UUID
-	err := r.pool.QueryRow(ctx, q, orgID, userID, code, rate).Scan(&id)
+	err := r.pool.QueryRow(ctx, q, campainID, userID, code, rate).Scan(&id)
+	return id, err
+}
+
+// InsertTx is like Insert using an open transaction.
+func (r *AffiliateRepository) InsertTx(ctx context.Context, tx pgx.Tx, campainID uuid.UUID, userID, code string, rate float64) (uuid.UUID, error) {
+	const q = `
+		INSERT INTO affiliates (campain_id, user_id, code, commission_rate, status, updated_at)
+		VALUES ($1, $2, $3, $4, 'active', now())
+		RETURNING id
+	`
+	var id uuid.UUID
+	err := tx.QueryRow(ctx, q, campainID, userID, code, rate).Scan(&id)
 	return id, err
 }
 
@@ -28,16 +40,16 @@ func (r *AffiliateRepository) CodeExists(ctx context.Context, code string) (bool
 	return n > 0, err
 }
 
-// GetByOrgAndUser returns an affiliate row for org + user, if any.
-func (r *AffiliateRepository) GetByOrgAndUser(ctx context.Context, orgID uuid.UUID, userID string) (*models.Affiliate, error) {
+// GetByCampainAndUser returns an affiliate row for campain + user, if any.
+func (r *AffiliateRepository) GetByCampainAndUser(ctx context.Context, campainID uuid.UUID, userID string) (*models.Affiliate, error) {
 	const q = `
-		SELECT id, organization_id, user_id, code, commission_rate::float8, status,
+		SELECT id, campain_id, user_id, code, commission_rate::float8, status,
 			stripe_connect_account_id, paypal_email, created_at, updated_at
-		FROM affiliates WHERE organization_id = $1 AND user_id = $2
+		FROM affiliates WHERE campain_id = $1 AND user_id = $2
 	`
 	var a models.Affiliate
-	err := r.pool.QueryRow(ctx, q, orgID, userID).Scan(
-		&a.ID, &a.OrganizationID, &a.UserID, &a.Code, &a.CommissionRate, &a.Status,
+	err := r.pool.QueryRow(ctx, q, campainID, userID).Scan(
+		&a.ID, &a.CampainID, &a.UserID, &a.Code, &a.CommissionRate, &a.Status,
 		&a.StripeConnectAccountID, &a.PayPalEmail, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -52,13 +64,13 @@ func (r *AffiliateRepository) GetByOrgAndUser(ctx context.Context, orgID uuid.UU
 // GetByID returns affiliate.
 func (r *AffiliateRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Affiliate, error) {
 	const q = `
-		SELECT id, organization_id, user_id, code, commission_rate::float8, status,
+		SELECT id, campain_id, user_id, code, commission_rate::float8, status,
 			stripe_connect_account_id, paypal_email, created_at, updated_at
 		FROM affiliates WHERE id = $1
 	`
 	var a models.Affiliate
 	err := r.pool.QueryRow(ctx, q, id).Scan(
-		&a.ID, &a.OrganizationID, &a.UserID, &a.Code, &a.CommissionRate, &a.Status,
+		&a.ID, &a.CampainID, &a.UserID, &a.Code, &a.CommissionRate, &a.Status,
 		&a.StripeConnectAccountID, &a.PayPalEmail, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -78,12 +90,12 @@ type CommissionPayoutRow struct {
 	AmountCents    int64
 	StripeAcct     *string
 	PayPalEmail    *string
-	OrganizationID uuid.UUID
+	CampainID uuid.UUID
 }
 
 func (r *AffiliateRepository) ListApprovedCommissions(ctx context.Context) ([]CommissionPayoutRow, error) {
 	const q = `
-		SELECT c.id, c.affiliate_id, c.order_id, c.amount_cents, a.stripe_connect_account_id, a.paypal_email, a.organization_id
+		SELECT c.id, c.affiliate_id, c.order_id, c.amount_cents, a.stripe_connect_account_id, a.paypal_email, a.campain_id
 		FROM commissions c
 		JOIN affiliates a ON a.id = c.affiliate_id
 		WHERE c.status = 'approved'
@@ -96,7 +108,7 @@ func (r *AffiliateRepository) ListApprovedCommissions(ctx context.Context) ([]Co
 	var out []CommissionPayoutRow
 	for rows.Next() {
 		var row CommissionPayoutRow
-		if err := rows.Scan(&row.CommissionID, &row.AffiliateID, &row.OrderID, &row.AmountCents, &row.StripeAcct, &row.PayPalEmail, &row.OrganizationID); err != nil {
+		if err := rows.Scan(&row.CommissionID, &row.AffiliateID, &row.OrderID, &row.AmountCents, &row.StripeAcct, &row.PayPalEmail, &row.CampainID); err != nil {
 			return nil, err
 		}
 		out = append(out, row)

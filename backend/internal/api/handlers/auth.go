@@ -240,7 +240,7 @@ func (h *Handlers) resolveOrCreateOAuthUser(ctx context.Context, provider, provi
 	role := "affiliate"
 	if h.Cfg.AuthBootstrapAdminEmail != "" && email != nil &&
 		strings.EqualFold(strings.TrimSpace(*email), strings.TrimSpace(h.Cfg.AuthBootstrapAdminEmail)) {
-		role = "admin"
+		role = "merchant"
 	}
 	if err := h.User.CreateOAuthUser(ctx, newID, email, displayName, role); err != nil {
 		return "", err
@@ -259,10 +259,10 @@ func (h *Handlers) applyMerchantOAuthSignup(ctx context.Context, userID, account
 	if companyName == "" {
 		return nil
 	}
-	return h.ensureMerchantOrg(ctx, userID, companyName)
+	return h.ensureMerchantCampain(ctx, userID, companyName)
 }
 
-func (h *Handlers) ensureMerchantOrg(ctx context.Context, userID, companyName string) error {
+func (h *Handlers) ensureMerchantCampain(ctx context.Context, userID, companyName string) error {
 	companyName = strings.TrimSpace(companyName)
 	if companyName == "" {
 		return fmt.Errorf("company name required")
@@ -274,19 +274,20 @@ func (h *Handlers) ensureMerchantOrg(ctx context.Context, userID, companyName st
 	if u == nil {
 		return fmt.Errorf("user not found")
 	}
-	if u.OrganizationID != nil {
+	if u.CampainID != nil {
 		return nil
 	}
-	orgID, err := h.Org.Create(ctx, companyName)
+	owner := userID
+	campainID, err := h.Campain.Create(ctx, companyName, &owner)
 	if err != nil {
 		return err
 	}
 	if h.Sub != nil {
-		if err := h.Sub.CreateFree(ctx, orgID); err != nil {
+		if err := h.Sub.CreateFree(ctx, campainID); err != nil {
 			return err
 		}
 	}
-	return h.User.SetOrganizationAndRole(ctx, userID, &orgID, "admin")
+	return h.User.SetCampainAndRole(ctx, userID, &campainID, "merchant")
 }
 
 // AuthMe GET /api/v1/auth/me

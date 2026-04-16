@@ -21,11 +21,11 @@ func NewOrderRepository(pool *pgxpool.Pool) *OrderRepository {
 }
 
 // UpsertOrder inserts or updates an order; returns order id.
-func (r *OrderRepository) UpsertOrder(ctx context.Context, tx pgx.Tx, orgID uuid.UUID, externalID, source string, customerRef *string, totalCents int64, currency string, affiliateID *uuid.UUID, raw json.RawMessage) (orderID uuid.UUID, err error) {
+func (r *OrderRepository) UpsertOrder(ctx context.Context, tx pgx.Tx, campainID uuid.UUID, externalID, source string, customerRef *string, totalCents int64, currency string, affiliateID *uuid.UUID, raw json.RawMessage) (orderID uuid.UUID, err error) {
 	const q = `
-		INSERT INTO orders (organization_id, external_id, source, customer_ref, total_cents, currency, affiliate_id, raw_payload, updated_at)
+		INSERT INTO orders (campain_id, external_id, source, customer_ref, total_cents, currency, affiliate_id, raw_payload, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
-		ON CONFLICT (organization_id, external_id, source) DO UPDATE SET
+		ON CONFLICT (campain_id, external_id, source) DO UPDATE SET
 			total_cents = EXCLUDED.total_cents,
 			currency = EXCLUDED.currency,
 			affiliate_id = COALESCE(EXCLUDED.affiliate_id, orders.affiliate_id),
@@ -33,7 +33,7 @@ func (r *OrderRepository) UpsertOrder(ctx context.Context, tx pgx.Tx, orgID uuid
 			updated_at = now()
 		RETURNING id
 	`
-	err = tx.QueryRow(ctx, q, orgID, externalID, source, customerRef, totalCents, currency, affiliateID, raw).Scan(&orderID)
+	err = tx.QueryRow(ctx, q, campainID, externalID, source, customerRef, totalCents, currency, affiliateID, raw).Scan(&orderID)
 	return orderID, err
 }
 
@@ -63,11 +63,11 @@ func (r *OrderRepository) Begin(ctx context.Context) (pgx.Tx, error) {
 }
 
 // GetAffiliateByID loads affiliate for rate lookup.
-func (r *OrderRepository) GetAffiliateByID(ctx context.Context, id uuid.UUID) (rate float64, orgID uuid.UUID, err error) {
-	const q = `SELECT commission_rate::float8, organization_id FROM affiliates WHERE id = $1 AND status = 'active'`
-	err = r.pool.QueryRow(ctx, q, id).Scan(&rate, &orgID)
+func (r *OrderRepository) GetAffiliateByID(ctx context.Context, id uuid.UUID) (rate float64, campainID uuid.UUID, err error) {
+	const q = `SELECT commission_rate::float8, campain_id FROM affiliates WHERE id = $1 AND status = 'active'`
+	err = r.pool.QueryRow(ctx, q, id).Scan(&rate, &campainID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, uuid.Nil, fmt.Errorf("affiliate not found")
 	}
-	return rate, orgID, err
+	return rate, campainID, err
 }

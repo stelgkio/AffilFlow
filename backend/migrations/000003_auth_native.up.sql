@@ -2,10 +2,10 @@
 
 ALTER TABLE users
     ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'affiliate'
-        CHECK (role IN ('affiliate', 'admin')),
+        CHECK (role IN ('affiliate', 'merchant')),
     ADD COLUMN IF NOT EXISTS display_name TEXT;
 
-COMMENT ON COLUMN users.role IS 'Realm-equivalent role: affiliate (default) or admin (merchant staff).';
+COMMENT ON COLUMN users.role IS 'Realm-equivalent role: affiliate (default) or merchant (merchant staff).';
 COMMENT ON COLUMN users.display_name IS 'Display name from OAuth profile or local.';
 
 CREATE TABLE IF NOT EXISTS auth_identities (

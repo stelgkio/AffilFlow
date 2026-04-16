@@ -7,13 +7,19 @@ import (
 	"github.com/stelgkio/affilflow/backend/pkg/response"
 )
 
-// CampaignPublicOrg is safe to expose on the public campaign detail endpoint.
-type CampaignPublicOrg struct {
-	ID               uuid.UUID `json:"id"`
-	Name             string    `json:"name"`
-	Slug             *string   `json:"slug,omitempty"`
-	ApprovalMode     string    `json:"approval_mode"`
-	DiscoveryEnabled bool      `json:"discovery_enabled"`
+// CampaignPublicCampain is safe to expose on the public campaign detail endpoint.
+type CampaignPublicCampain struct {
+	ID                      uuid.UUID `json:"id"`
+	Name                    string    `json:"name"`
+	Slug                    *string   `json:"slug,omitempty"`
+	Tagline                 *string   `json:"tagline,omitempty"`
+	Description             *string   `json:"description,omitempty"`
+	BrandWebsiteURL         *string   `json:"brand_website_url,omitempty"`
+	TermsURL                *string   `json:"terms_url,omitempty"`
+	DefaultCommissionRate   float64   `json:"default_commission_rate"`
+	AttributionWindowDays   int       `json:"attribution_window_days"`
+	ApprovalMode            string    `json:"approval_mode"`
+	DiscoveryEnabled        bool      `json:"discovery_enabled"`
 }
 
 // CampaignPublicPartner is a leaderboard row without internal user identifiers.
@@ -25,7 +31,7 @@ type CampaignPublicPartner struct {
 
 // CampaignDetailResponse is GET /api/v1/campaigns/:campaignRef
 type CampaignDetailResponse struct {
-	Organization CampaignPublicOrg       `json:"organization"`
+	Campain     CampaignPublicCampain   `json:"campain"`
 	Stats        CampaignPublicStats     `json:"stats"`
 	TopPartners  []CampaignPublicPartner `json:"top_partners"`
 }
@@ -40,13 +46,19 @@ type CampaignPublicStats struct {
 	ActiveAffiliateCount     int64 `json:"active_affiliate_count"`
 }
 
-func orgToPublic(o *models.Organization) CampaignPublicOrg {
-	return CampaignPublicOrg{
-		ID:               o.ID,
-		Name:             o.Name,
-		Slug:             o.Slug,
-		ApprovalMode:     o.ApprovalMode,
-		DiscoveryEnabled: o.DiscoveryEnabled,
+func campainToPublic(c *models.Campain) CampaignPublicCampain {
+	return CampaignPublicCampain{
+		ID:                    c.ID,
+		Name:                  c.Name,
+		Slug:                  c.Slug,
+		Tagline:               c.Tagline,
+		Description:           c.Description,
+		BrandWebsiteURL:       c.BrandWebsiteURL,
+		TermsURL:              c.TermsURL,
+		DefaultCommissionRate: c.DefaultCommissionRate,
+		AttributionWindowDays: c.AttributionWindowDays,
+		ApprovalMode:          c.ApprovalMode,
+		DiscoveryEnabled:      c.DiscoveryEnabled,
 	}
 }
 
@@ -57,21 +69,21 @@ func (h *Handlers) CampaignDetail(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "missing campaign reference")
 	}
 
-	var o *models.Organization
+	var campain *models.Campain
 	var err error
 	if id, parseErr := uuid.Parse(ref); parseErr == nil {
-		o, err = h.Org.GetDiscoverableByID(c.UserContext(), id)
+		campain, err = h.Campain.GetDiscoverableByID(c.UserContext(), id)
 	} else {
-		o, err = h.Org.GetDiscoverableBySlug(c.UserContext(), ref)
+		campain, err = h.Campain.GetDiscoverableBySlug(c.UserContext(), ref)
 	}
 	if err != nil {
 		return err
 	}
-	if o == nil {
+	if campain == nil {
 		return fiber.NewError(fiber.StatusNotFound, "campaign not found")
 	}
 
-	summary, leaders, err := h.Dash.CompanySummaryWithLeaders(c.UserContext(), o.ID, 5)
+	summary, leaders, err := h.Dash.CompanySummaryWithLeaders(c.UserContext(), campain.ID, 5)
 	if err != nil {
 		return err
 	}
@@ -86,7 +98,7 @@ func (h *Handlers) CampaignDetail(c *fiber.Ctx) error {
 	}
 
 	out := CampaignDetailResponse{
-		Organization: orgToPublic(o),
+		Campain: campainToPublic(campain),
 		Stats: CampaignPublicStats{
 			OrderCount:               summary.OrderCount,
 			SalesTotalCents:          summary.SalesTotalCents,

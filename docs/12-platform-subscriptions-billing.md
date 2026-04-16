@@ -33,7 +33,7 @@ You can **adjust** `max_invites` per row when product marketing changes, without
 ```mermaid
 flowchart LR
   subgraph merchant [Merchant tenant]
-    T[Organization]
+    T[Campain]
     SUB[Subscription]
   end
   subgraph stripe [Stripe Billing]
@@ -57,7 +57,7 @@ flowchart LR
 
 ## Keycloak / users
 
-Tenants may map to **Keycloak groups** or **organization claims**; alternatively store `organization_id` on app users and resolve plan server-side.
+Tenants may map to **Keycloak groups** or **campain claims**; alternatively store `campain_id` on app users and resolve plan server-side.
 
 ## Environment (conceptual)
 

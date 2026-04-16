@@ -34,7 +34,7 @@ func TestParseInvalidSecret(t *testing.T) {
 		AuthJWTIssuer:   "affilflow",
 		AuthJWTAudience: "affilflow-api",
 	}
-	raw, err := IssueAccessToken(cfg, "u1", []string{"admin"})
+	raw, err := IssueAccessToken(cfg, "u1", []string{"merchant"})
 	if err != nil {
 		t.Fatal(err)
 	}

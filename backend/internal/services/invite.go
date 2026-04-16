@@ -21,11 +21,12 @@ type InviteService struct {
 	invites    *repository.InviteRepository
 	users      *repository.UserRepository
 	affiliates *repository.AffiliateRepository
+	campain    *repository.CampainRepository
 	limits     *LimitService
 }
 
-func NewInviteService(cfg *config.Config, inv *repository.InviteRepository, u *repository.UserRepository, a *repository.AffiliateRepository, l *LimitService) *InviteService {
-	return &InviteService{cfg: cfg, invites: inv, users: u, affiliates: a, limits: l}
+func NewInviteService(cfg *config.Config, inv *repository.InviteRepository, u *repository.UserRepository, a *repository.AffiliateRepository, camp *repository.CampainRepository, l *LimitService) *InviteService {
+	return &InviteService{cfg: cfg, invites: inv, users: u, affiliates: a, campain: camp, limits: l}
 }
 
 func hashInviteToken(plain string) string {
@@ -34,8 +35,8 @@ func hashInviteToken(plain string) string {
 }
 
 // Create returns plainToken for URL and inviteID.
-func (s *InviteService) Create(ctx context.Context, orgID uuid.UUID, email *string, createdBy *string) (plainToken string, inviteID uuid.UUID, err error) {
-	ok, _, max, err := s.limits.CanInviteAffiliate(ctx, orgID)
+func (s *InviteService) Create(ctx context.Context, campainID uuid.UUID, email *string, createdBy *string) (plainToken string, inviteID uuid.UUID, err error) {
+	ok, _, max, err := s.limits.CanInviteAffiliate(ctx, campainID)
 	if err != nil {
 		return "", uuid.Nil, err
 	}
@@ -48,7 +49,7 @@ func (s *InviteService) Create(ctx context.Context, orgID uuid.UUID, email *stri
 	}
 	hash := hashInviteToken(plainToken)
 	exp := time.Now().Add(14 * 24 * time.Hour)
-	id, err := s.invites.Insert(ctx, orgID, email, hash, exp, createdBy)
+	id, err := s.invites.Insert(ctx, campainID, email, hash, exp, createdBy)
 	if err != nil {
 		return "", uuid.Nil, err
 	}
@@ -74,14 +75,20 @@ func (s *InviteService) Accept(ctx context.Context, plainToken, userID string, e
 	if err != nil || inv == nil {
 		return fmt.Errorf("invalid or expired invite")
 	}
-	if err := s.users.Upsert(ctx, userID, email, &inv.OrganizationID); err != nil {
+	if err := s.users.Upsert(ctx, userID, email, &inv.CampainID); err != nil {
 		return err
 	}
 	code, err := s.uniqueCode(ctx)
 	if err != nil {
 		return err
 	}
-	if _, err := s.affiliates.Insert(ctx, inv.OrganizationID, userID, code, 0.1); err != nil {
+	rate := 0.1
+	if s.campain != nil {
+		if co, err := s.campain.GetByID(ctx, inv.CampainID); err == nil && co != nil && co.DefaultCommissionRate > 0 && co.DefaultCommissionRate <= 1 {
+			rate = co.DefaultCommissionRate
+		}
+	}
+	if _, err := s.affiliates.Insert(ctx, inv.CampainID, userID, code, rate); err != nil {
 		return err
 	}
 	return s.invites.MarkAccepted(ctx, inv.ID)
@@ -102,4 +109,9 @@ func (s *InviteService) uniqueCode(ctx context.Context) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("could not generate code")
+}
+
+// CountPendingInvitesForCampain returns pending outbound invites for a program.
+func (s *InviteService) CountPendingInvitesForCampain(ctx context.Context, campainID uuid.UUID) (int64, error) {
+	return s.invites.CountPendingForCampain(ctx, campainID)
 }

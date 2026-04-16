@@ -74,7 +74,7 @@ paths:
             $ref: '#/definitions/internal_api_handlers.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Run affiliate payouts (admin)
+      summary: Run affiliate payouts (merchant)
       tags:
       - payouts
   /api/v1/ping:

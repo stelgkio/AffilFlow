@@ -16,10 +16,10 @@ func NewDashboardRepository(pool *pgxpool.Pool) *DashboardRepository {
 	return &DashboardRepository{pool: pool}
 }
 
-// CompanySummary is performance for one merchant organization (your “program” / campaign scope).
+// CompanySummary is performance for one merchant campain (your "program" / campaign scope).
 type CompanySummary struct {
-	OrganizationID       uuid.UUID `json:"organization_id"`
-	OrganizationName     string    `json:"organization_name"`
+	CampainID            uuid.UUID `json:"campain_id"`
+	CampainName          string    `json:"campain_name"`
 	OrderCount           int64     `json:"order_count"`
 	SalesTotalCents      int64     `json:"sales_total_cents"`
 	CommissionsPending   int64     `json:"commissions_pending_cents"`
@@ -28,7 +28,7 @@ type CompanySummary struct {
 	ActiveAffiliateCount int64     `json:"active_affiliate_count"`
 }
 
-// AffiliateLeaderboardRow is top affiliates by commission volume in the org.
+// AffiliateLeaderboardRow is top affiliates by commission volume in the campain.
 type AffiliateLeaderboardRow struct {
 	AffiliateID   uuid.UUID `json:"affiliate_id"`
 	Code          string    `json:"code"`
@@ -37,18 +37,18 @@ type AffiliateLeaderboardRow struct {
 	OrderCount    int64     `json:"attributed_orders"`
 }
 
-// CompanySummaryWithLeaders returns org KPIs and top performers.
-func (r *DashboardRepository) CompanySummaryWithLeaders(ctx context.Context, orgID uuid.UUID, topN int) (*CompanySummary, []AffiliateLeaderboardRow, error) {
+// CompanySummaryWithLeaders returns campain KPIs and top performers.
+func (r *DashboardRepository) CompanySummaryWithLeaders(ctx context.Context, campainID uuid.UUID, topN int) (*CompanySummary, []AffiliateLeaderboardRow, error) {
 	var name string
-	err := r.pool.QueryRow(ctx, `SELECT name FROM organizations WHERE id = $1`, orgID).Scan(&name)
+	err := r.pool.QueryRow(ctx, `SELECT name FROM campains WHERE id = $1`, campainID).Scan(&name)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	var orderCount, sales int64
 	err = r.pool.QueryRow(ctx, `
-		SELECT COUNT(*), COALESCE(SUM(total_cents), 0) FROM orders WHERE organization_id = $1
-	`, orgID).Scan(&orderCount, &sales)
+		SELECT COUNT(*), COALESCE(SUM(total_cents), 0) FROM orders WHERE campain_id = $1
+	`, campainID).Scan(&orderCount, &sales)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -58,9 +58,9 @@ func (r *DashboardRepository) CompanySummaryWithLeaders(ctx context.Context, org
 		SELECT c.status, COALESCE(SUM(c.amount_cents), 0)
 		FROM commissions c
 		JOIN affiliates a ON a.id = c.affiliate_id
-		WHERE a.organization_id = $1
+		WHERE a.campain_id = $1
 		GROUP BY c.status
-	`, orgID)
+	`, campainID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -86,15 +86,15 @@ func (r *DashboardRepository) CompanySummaryWithLeaders(ctx context.Context, org
 
 	var affCount int64
 	err = r.pool.QueryRow(ctx, `
-		SELECT COUNT(*) FROM affiliates WHERE organization_id = $1 AND status = 'active'
-	`, orgID).Scan(&affCount)
+		SELECT COUNT(*) FROM affiliates WHERE campain_id = $1 AND status = 'active'
+	`, campainID).Scan(&affCount)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	summary := &CompanySummary{
-		OrganizationID:       orgID,
-		OrganizationName:     name,
+		CampainID:            campainID,
+		CampainName:          name,
 		OrderCount:           orderCount,
 		SalesTotalCents:      sales,
 		CommissionsPending:   pend,
@@ -112,11 +112,11 @@ func (r *DashboardRepository) CompanySummaryWithLeaders(ctx context.Context, org
 			COUNT(DISTINCT c.order_id)
 		FROM affiliates a
 		LEFT JOIN commissions c ON c.affiliate_id = a.id
-		WHERE a.organization_id = $1 AND a.status = 'active'
+		WHERE a.campain_id = $1 AND a.status = 'active'
 		GROUP BY a.id, a.code, a.user_id
 		ORDER BY COALESCE(SUM(c.amount_cents), 0) DESC
 		LIMIT $2
-	`, orgID, topN)
+	`, campainID, topN)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -139,10 +139,10 @@ func (r *DashboardRepository) CompanySummaryWithLeaders(ctx context.Context, org
 	return summary, leaders, nil
 }
 
-// AffiliateProgramStat is earnings per merchant program (organization) the affiliate participates in.
+// AffiliateProgramStat is earnings per merchant program (campain) the affiliate participates in.
 type AffiliateProgramStat struct {
-	OrganizationID   uuid.UUID `json:"organization_id"`
-	OrganizationName string    `json:"organization_name"`
+	CampainID        uuid.UUID `json:"campain_id"`
+	CampainName      string    `json:"campain_name"`
 	AccruedCents     int64     `json:"accrued_cents"` // pending + approved (not yet paid out)
 	PaidCents        int64     `json:"paid_cents"`
 	OrderCount       int64     `json:"attributed_orders"`
@@ -160,7 +160,7 @@ func (r *DashboardRepository) AffiliateProgramStats(ctx context.Context, userID 
 			COALESCE(SUM(CASE WHEN c.status = 'paid' THEN c.amount_cents ELSE 0 END), 0),
 			COUNT(DISTINCT c.order_id)
 		FROM affiliates a
-		INNER JOIN organizations o ON o.id = a.organization_id
+		INNER JOIN campains o ON o.id = a.campain_id
 		LEFT JOIN commissions c ON c.affiliate_id = a.id
 		WHERE a.user_id = $1 AND a.status = 'active'
 		GROUP BY o.id, o.name, a.code
@@ -174,8 +174,8 @@ func (r *DashboardRepository) AffiliateProgramStats(ctx context.Context, userID 
 	for rows.Next() {
 		var s AffiliateProgramStat
 		if err := rows.Scan(
-			&s.OrganizationID,
-			&s.OrganizationName,
+			&s.CampainID,
+			&s.CampainName,
 			&s.ReferralCode,
 			&s.AccruedCents,
 			&s.PaidCents,

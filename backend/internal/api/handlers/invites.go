@@ -9,11 +9,11 @@ import (
 	"github.com/stelgkio/affilflow/backend/pkg/response"
 )
 
-// InviteCreate POST /api/v1/organizations/:orgId/invites
+// InviteCreate POST /api/v1/campains/:campainId/invites
 func (h *Handlers) InviteCreate(c *fiber.Ctx) error {
-	orgID, err := uuid.Parse(c.Params("orgId"))
+	campainID, err := uuid.Parse(c.Params("campainId"))
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid organization id")
+		return fiber.NewError(fiber.StatusBadRequest, "invalid campain id")
 	}
 	var body struct {
 		Email *string `json:"email"`
@@ -24,7 +24,7 @@ func (h *Handlers) InviteCreate(c *fiber.Ctx) error {
 	if uid != "" {
 		createdBy = &uid
 	}
-	plain, id, err := h.Invite.Create(c.UserContext(), orgID, body.Email, createdBy)
+	plain, id, err := h.Invite.Create(c.UserContext(), campainID, body.Email, createdBy)
 	if err != nil {
 		code := "invite_failed"
 		status := fiber.StatusBadRequest
@@ -56,7 +56,7 @@ func (h *Handlers) InviteValidate(c *fiber.Ctx) error {
 	}
 	return response.JSON(c, fiber.StatusOK, fiber.Map{
 		"valid":           true,
-		"organization_id": inv.OrganizationID,
+		"campain_id": inv.CampainID,
 		"expires_at":      inv.ExpiresAt,
 	})
 }

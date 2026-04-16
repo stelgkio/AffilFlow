@@ -28,25 +28,25 @@ func NewOrderService(o *repository.OrderRepository, a *repository.AffiliateRepos
 }
 
 // ProcessExternalOrder upserts order and creates commission when affiliate is set (idempotent).
-func (s *OrderService) ProcessExternalOrder(ctx context.Context, orgID uuid.UUID, externalID, source string, customerRef *string, totalCents int64, currency string, affiliateID *uuid.UUID, raw json.RawMessage) error {
+func (s *OrderService) ProcessExternalOrder(ctx context.Context, campainID uuid.UUID, externalID, source string, customerRef *string, totalCents int64, currency string, affiliateID *uuid.UUID, raw json.RawMessage) error {
 	tx, err := s.orders.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	orderID, err := s.orders.UpsertOrder(ctx, tx, orgID, externalID, source, customerRef, totalCents, currency, affiliateID, raw)
+	orderID, err := s.orders.UpsertOrder(ctx, tx, campainID, externalID, source, customerRef, totalCents, currency, affiliateID, raw)
 	if err != nil {
 		return err
 	}
 
 	if affiliateID != nil {
-		rate, affOrg, err := s.orders.GetAffiliateByID(ctx, *affiliateID)
+		rate, affCampain, err := s.orders.GetAffiliateByID(ctx, *affiliateID)
 		if err != nil {
 			return err
 		}
-		if affOrg != orgID {
-			return fmt.Errorf("affiliate does not belong to organization")
+		if affCampain != campainID {
+			return fmt.Errorf("affiliate does not belong to campain")
 		}
 		exists, err := s.orders.CommissionExists(ctx, tx, orderID, *affiliateID)
 		if err != nil {

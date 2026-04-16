@@ -20,7 +20,7 @@ type Deps struct {
 	Payout    *services.PayoutService
 	Discovery *services.DiscoveryService
 
-	Org     *repository.OrganizationRepository
+	Campain *repository.CampainRepository
 	User    *repository.UserRepository
 	Sub     *repository.SubscriptionRepository
 	AppRepo *repository.ApplicationRepository

@@ -55,7 +55,7 @@ func main() {
 		log.Println("migrations applied")
 	}
 
-	orgRepo := repository.NewOrganizationRepository(pool)
+	campainRepo := repository.NewCampainRepository(pool)
 	userRepo := repository.NewUserRepository(pool)
 	subRepo := repository.NewSubscriptionRepository(pool)
 	invRepo := repository.NewInviteRepository(pool)
@@ -66,12 +66,12 @@ func main() {
 	dashRepo := repository.NewDashboardRepository(pool)
 
 	bc := blockchain.Noop{}
-	limitSvc := services.NewLimitService(orgRepo, subRepo)
-	inviteSvc := services.NewInviteService(cfg, invRepo, userRepo, affRepo, limitSvc)
-	billingSvc := services.NewBillingService(orgRepo, subRepo)
+	limitSvc := services.NewLimitService(campainRepo, subRepo)
+	inviteSvc := services.NewInviteService(cfg, invRepo, userRepo, affRepo, campainRepo, limitSvc)
+	billingSvc := services.NewBillingService(campainRepo, subRepo)
 	orderSvc := services.NewOrderService(orderRepo, affRepo, bc)
 	payoutSvc := services.NewPayoutService(affRepo, bc, cfg.StripeSecretKey)
-	discoverySvc := services.NewDiscoveryService(orgRepo, appRepo, userRepo, affRepo, limitSvc)
+	discoverySvc := services.NewDiscoveryService(campainRepo, appRepo, userRepo, affRepo, limitSvc)
 
 	deps := &handlers.Deps{
 		Cfg:       cfg,
@@ -82,7 +82,7 @@ func main() {
 		Billing:   billingSvc,
 		Payout:    payoutSvc,
 		Discovery: discoverySvc,
-		Org:       orgRepo,
+		Campain:   campainRepo,
 		User:      userRepo,
 		Sub:       subRepo,
 		AppRepo:   appRepo,

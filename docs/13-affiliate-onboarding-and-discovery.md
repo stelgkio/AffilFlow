@@ -6,8 +6,8 @@ This document ties together **how companies onboard affiliates** (email + sharea
 
 | Role | In AffilFlow |
 |------|----------------|
-| **Company (merchant)** | `organization` with a subscription; runs the affiliate program |
-| **Affiliate** | `user` + `affiliate` row under one or more organizations (usually one primary program per relationship) |
+| **Company (merchant)** | `campain` with a subscription; runs the affiliate program |
+| **Affiliate** | `user` + `affiliate` row under one or more campains (usually one primary program per relationship) |
 
 ## Path A — Company invites someone they found (e.g. Instagram)
 
@@ -24,7 +24,7 @@ sequenceDiagram
   participant Aff as Prospective affiliate
 
   Merch->>Web: Create invite (email optional)
-  Web->>API: POST .../invites (org, email?)
+  Web->>API: POST .../invites (campain, email?)
   API->>API: Check subscription max_invites + create affiliate_invite row + token
   API-->>Web: invite_url, optional email_queued
   alt Email provided
@@ -59,40 +59,40 @@ Affiliates need a way to **find programs** without a prior DM.
 
 | Mechanism | Description |
 |-----------|-------------|
-| **Public program directory** | Next.js page lists **organizations** that opted into **public discovery** (`discovery_enabled`, blurb, logo, vertical). Affiliate clicks **Apply** → request or auto-invite flow. |
+| **Public program directory** | Next.js page lists **campains** that opted into **public discovery** (`discovery_enabled`, blurb, logo, vertical). Affiliate clicks **Apply** → request or auto-invite flow. |
 | **Search** | Filter by category, country, commission range (denormalized fields for performance). |
-| **Direct link** | Company shares a **public landing** `/{orgSlug}/affiliate-program` with CTA “Apply”. |
+| **Direct link** | Company shares a **public landing** `/{campainSlug}/affiliate-program` with CTA “Apply”. |
 
 ### Apply flow
 
 ```mermaid
 flowchart LR
   A[Affiliate browses directory]
-  A --> B[Apply to organization]
-  B --> C{Org approval mode?}
+  A --> B[Apply to campain]
+  B --> C{Campain approval mode?}
   C -->|Auto| D[Create pending affiliate + notify company]
   C -->|Manual| E[Request queue for company admin]
 ```
 
-Approval mode is per **organization** setting: **open**, **request-to-join**, or **invite-only**.
+Approval mode is per **campain** setting: **open**, **request-to-join**, or **invite-only**.
 
 ## Data model additions (conceptual)
 
 | Table / entity | Purpose |
 |----------------|---------|
-| **affiliate_invites** | `id`, `organization_id`, `email` (nullable), `token_hash`, `expires_at`, `status` (`pending` / `accepted` / `revoked`), `created_by_user_id` |
-| **organization** fields | `slug` (public URL), `discovery_enabled`, `approval_mode` |
+| **affiliate_invites** | `id`, `campain_id`, `email` (nullable), `token_hash`, `expires_at`, `status` (`pending` / `accepted` / `revoked`), `created_by_user_id` |
+| **campain** fields | `slug` (public URL), `discovery_enabled`, `approval_mode` |
 
-On **accept**: create **`affiliates`** row (and `users` if new), mark invite **accepted**, bind **Keycloak** user to org (group or `organization_id` claim).
+On **accept**: create **`affiliates`** row (and `users` if new), mark invite **accepted**, bind **Keycloak** user to campain (group or `campain_id` claim).
 
 ## API surface (conceptual)
 
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /api/v1/organizations/{id}/invites` | Company admin creates invite; returns **link**; optional send email |
+| `POST /api/v1/campains/{id}/invites` | Company admin creates invite; returns **link**; optional send email |
 | `GET /join/{token}` (web) | Next.js page; validates token via public API |
 | `POST /api/v1/invites/{token}/accept` | After Keycloak session established, completes onboarding |
-| `GET /api/v1/directory/programs` | Public or authenticated list of discoverable orgs |
+| `GET /api/v1/directory/programs` | Public or authenticated list of discoverable campains |
 | `POST /api/v1/directory/programs/{id}/apply` | Affiliate applies |
 
 Exact paths version under `/api/v1` as usual.
@@ -105,4 +105,4 @@ Exact paths version under `/api/v1` as usual.
 ## Security
 
 - Tokens: **high entropy**, store **hash only** in DB if possible; rate-limit validation attempts.
-- Scoped to **one organization**; no cross-tenant token reuse.
+- Scoped to **one campain**; no cross-tenant token reuse.

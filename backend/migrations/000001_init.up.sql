@@ -1,4 +1,4 @@
--- AffilFlow initial schema (organizations, subscriptions, affiliate core)
+-- AffilFlow initial schema (campains, subscriptions, affiliate core)
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
@@ -16,7 +16,7 @@ INSERT INTO subscription_plans (plan_key, price_eur_cents, max_invites) VALUES
     ('growth', 2000, 60),
     ('scale', 5000, 200);
 
-CREATE TABLE organizations (
+CREATE TABLE campains (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     slug TEXT UNIQUE,
@@ -29,7 +29,7 @@ CREATE TABLE organizations (
 
 CREATE TABLE subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    campain_id UUID NOT NULL REFERENCES campains(id) ON DELETE CASCADE,
     plan_key TEXT NOT NULL REFERENCES subscription_plans(plan_key),
     stripe_subscription_id TEXT,
     status TEXT NOT NULL DEFAULT 'active'
@@ -39,19 +39,19 @@ CREATE TABLE subscriptions (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_subscriptions_org ON subscriptions(organization_id);
+CREATE INDEX idx_subscriptions_campain ON subscriptions(campain_id);
 
 CREATE TABLE users (
     id TEXT PRIMARY KEY,
     email TEXT,
-    organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL,
+    campain_id UUID REFERENCES campains(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE affiliate_invites (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    campain_id UUID NOT NULL REFERENCES campains(id) ON DELETE CASCADE,
     email TEXT,
     token_hash TEXT NOT NULL UNIQUE,
     expires_at TIMESTAMPTZ NOT NULL,
@@ -61,11 +61,11 @@ CREATE TABLE affiliate_invites (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_affiliate_invites_org ON affiliate_invites(organization_id);
+CREATE INDEX idx_affiliate_invites_campain ON affiliate_invites(campain_id);
 
 CREATE TABLE affiliates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    campain_id UUID NOT NULL REFERENCES campains(id) ON DELETE CASCADE,
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     code TEXT NOT NULL UNIQUE,
     commission_rate NUMERIC(8, 6) NOT NULL DEFAULT 0.1,
@@ -73,10 +73,10 @@ CREATE TABLE affiliates (
         CHECK (status IN ('active', 'paused', 'removed')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (organization_id, user_id)
+    UNIQUE (campain_id, user_id)
 );
 
-CREATE INDEX idx_affiliates_org ON affiliates(organization_id);
+CREATE INDEX idx_affiliates_campain ON affiliates(campain_id);
 
 CREATE TABLE referrals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -91,7 +91,7 @@ CREATE INDEX idx_referrals_affiliate ON referrals(affiliate_id);
 
 CREATE TABLE orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    campain_id UUID NOT NULL REFERENCES campains(id) ON DELETE CASCADE,
     external_id TEXT NOT NULL,
     source TEXT NOT NULL CHECK (source IN ('shopify', 'woocommerce')),
     customer_ref TEXT,
@@ -102,7 +102,7 @@ CREATE TABLE orders (
     raw_payload JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (organization_id, external_id, source)
+    UNIQUE (campain_id, external_id, source)
 );
 
 CREATE INDEX idx_orders_affiliate ON orders(affiliate_id);

@@ -23,14 +23,14 @@ func NewAffiliateRepository(pool *pgxpool.Pool) *AffiliateRepository {
 // GetByCode returns an affiliate by global referral code.
 func (r *AffiliateRepository) GetByCode(ctx context.Context, code string) (*models.Affiliate, error) {
 	const q = `
-		SELECT id, organization_id, user_id, code, commission_rate::float8, status,
+		SELECT id, campain_id, user_id, code, commission_rate::float8, status,
 			stripe_connect_account_id, paypal_email, created_at, updated_at
 		FROM affiliates
 		WHERE code = $1 AND status = 'active'
 	`
 	var a models.Affiliate
 	err := r.pool.QueryRow(ctx, q, code).Scan(
-		&a.ID, &a.OrganizationID, &a.UserID, &a.Code, &a.CommissionRate, &a.Status,
+		&a.ID, &a.CampainID, &a.UserID, &a.Code, &a.CommissionRate, &a.Status,
 		&a.StripeConnectAccountID, &a.PayPalEmail, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {

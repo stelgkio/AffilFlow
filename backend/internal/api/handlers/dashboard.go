@@ -9,8 +9,8 @@ import (
 	"github.com/stelgkio/affilflow/backend/pkg/response"
 )
 
-// CompanyDashboard GET /api/v1/dashboard/company (admin).
-// Uses users.organization_id, or ?organization_id= for admins when the user row has no org yet (dev).
+// CompanyDashboard GET /api/v1/dashboard/company (merchant).
+// Uses ?campain_id= when present (must be owned by this merchant), otherwise users.campain_id.
 func (h *Handlers) CompanyDashboard(c *fiber.Ctx) error {
 	uid, _ := c.Locals(middleware.LocalUserID).(string)
 	if uid == "" {
@@ -22,27 +22,32 @@ func (h *Handlers) CompanyDashboard(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-
-	var orgID *uuid.UUID
-	if u != nil && u.OrganizationID != nil {
-		orgID = u.OrganizationID
+	if u == nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "user not found")
 	}
-	if orgID == nil {
-		q := strings.TrimSpace(c.Query("organization_id"))
-		if q != "" {
-			id, err := uuid.Parse(q)
-			if err != nil {
-				return fiber.NewError(fiber.StatusBadRequest, "invalid organization_id")
-			}
-			orgID = &id
+
+	var campainID *uuid.UUID
+	q := strings.TrimSpace(c.Query("campain_id"))
+	if q != "" {
+		id, err := uuid.Parse(q)
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "invalid campain_id")
 		}
+		if strings.EqualFold(u.Role, "merchant") {
+			if err := h.assertMerchantOwnsCampain(ctx, uid, u, id); err != nil {
+				return err
+			}
+		}
+		campainID = &id
+	} else if u.CampainID != nil {
+		campainID = u.CampainID
 	}
-	if orgID == nil {
-		return response.JSONError(c, fiber.StatusBadRequest, "no_organization",
-			"link your user to an organization (users.organization_id) or pass ?organization_id= as an admin")
+	if campainID == nil {
+		return response.JSONError(c, fiber.StatusBadRequest, "no_campain",
+			"link your user to a campain or pass ?campain_id=")
 	}
 
-	summary, leaders, err := h.Dash.CompanySummaryWithLeaders(ctx, *orgID, 10)
+	summary, leaders, err := h.Dash.CompanySummaryWithLeaders(ctx, *campainID, 10)
 	if err != nil {
 		return err
 	}
@@ -50,11 +55,11 @@ func (h *Handlers) CompanyDashboard(c *fiber.Ctx) error {
 		"summary":  summary,
 		"leaders":  leaders,
 		"currency": "EUR",
-		"note":     "Programs map to merchant organizations until a dedicated campaigns model exists.",
+		"note":     "Programs map to merchant campains until a dedicated campaigns model exists.",
 	})
 }
 
-// AffiliateDashboard GET /api/v1/dashboard/affiliate — earnings per program (organization) for this user.
+// AffiliateDashboard GET /api/v1/dashboard/affiliate — earnings per program (campain) for this user.
 func (h *Handlers) AffiliateDashboard(c *fiber.Ctx) error {
 	uid, _ := c.Locals(middleware.LocalUserID).(string)
 	if uid == "" {

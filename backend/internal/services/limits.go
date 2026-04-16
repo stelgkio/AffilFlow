@@ -9,17 +9,17 @@ import (
 
 // LimitService enforces subscription invite caps.
 type LimitService struct {
-	org *repository.OrganizationRepository
+	campain *repository.CampainRepository
 	sub *repository.SubscriptionRepository
 }
 
-func NewLimitService(o *repository.OrganizationRepository, s *repository.SubscriptionRepository) *LimitService {
-	return &LimitService{org: o, sub: s}
+func NewLimitService(c *repository.CampainRepository, s *repository.SubscriptionRepository) *LimitService {
+	return &LimitService{campain: c, sub: s}
 }
 
-// CanInviteAffiliate returns true if org is under max_invites for current plan.
-func (s *LimitService) CanInviteAffiliate(ctx context.Context, orgID uuid.UUID) (bool, int, int, error) {
-	pk, err := s.sub.GetActivePlanKey(ctx, orgID)
+// CanInviteAffiliate returns true if campain is under max_invites for current plan.
+func (s *LimitService) CanInviteAffiliate(ctx context.Context, campainID uuid.UUID) (bool, int, int, error) {
+	pk, err := s.sub.GetActivePlanKey(ctx, campainID)
 	if err != nil {
 		return false, 0, 0, err
 	}
@@ -27,7 +27,7 @@ func (s *LimitService) CanInviteAffiliate(ctx context.Context, orgID uuid.UUID) 
 	if err != nil {
 		return false, 0, 0, err
 	}
-	n, err := s.org.CountAffiliates(ctx, orgID)
+	n, err := s.campain.CountAffiliates(ctx, campainID)
 	if err != nil {
 		return false, 0, 0, err
 	}

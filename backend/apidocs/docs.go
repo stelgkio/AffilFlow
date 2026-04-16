@@ -49,7 +49,7 @@ const docTemplate = `{
                 "tags": [
                     "payouts"
                 ],
-                "summary": "Run affiliate payouts (admin)",
+                "summary": "Run affiliate payouts (merchant)",
                 "responses": {
                     "200": {
                         "description": "OK",

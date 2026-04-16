@@ -34,7 +34,7 @@ type Config struct {
 	OAuthFacebookClientID     string
 	OAuthFacebookClientSecret string
 
-	// AuthBootstrapAdminEmail if set, first OAuth sign-in with this email gets role admin.
+	// AuthBootstrapAdminEmail if set, first OAuth sign-in with this email gets role merchant.
 	AuthBootstrapAdminEmail string
 
 	// JWTSkipValidation disables signature checks (local dev only; never in prod).
@@ -67,8 +67,8 @@ type Config struct {
 
 	// PublicAppBaseURL is used to build invite links (e.g. https://app.example.com).
 	PublicAppBaseURL string
-	// DefaultOrgUUID optional org for webhooks when store is not registered (dev only). Env: DEFAULT_ORGANIZATION_ID
-	DefaultOrgUUID *uuid.UUID
+	// DefaultCampainUUID optional campain for webhooks when store is not registered (dev only). Env: DEFAULT_CAMPAIN_ID
+	DefaultCampainUUID *uuid.UUID
 }
 
 // Load reads .env if present and parses Config.
@@ -150,12 +150,12 @@ func Load() (*Config, error) {
 		}
 	}
 
-	if v := os.Getenv("DEFAULT_ORGANIZATION_ID"); v != "" {
+	if v := os.Getenv("DEFAULT_CAMPAIN_ID"); v != "" {
 		id, err := uuid.Parse(v)
 		if err != nil {
-			return nil, fmt.Errorf("DEFAULT_ORGANIZATION_ID: %w", err)
+			return nil, fmt.Errorf("DEFAULT_CAMPAIN_ID: %w", err)
 		}
-		cfg.DefaultOrgUUID = &id
+		cfg.DefaultCampainUUID = &id
 	}
 
 	return cfg, nil

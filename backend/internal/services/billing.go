@@ -12,12 +12,12 @@ import (
 
 // BillingService applies Stripe Billing webhook payloads to subscriptions.
 type BillingService struct {
-	org *repository.OrganizationRepository
+	campain *repository.CampainRepository
 	sub *repository.SubscriptionRepository
 }
 
-func NewBillingService(o *repository.OrganizationRepository, s *repository.SubscriptionRepository) *BillingService {
-	return &BillingService{org: o, sub: s}
+func NewBillingService(c *repository.CampainRepository, s *repository.SubscriptionRepository) *BillingService {
+	return &BillingService{campain: c, sub: s}
 }
 
 // ApplyStripeEvent parses a verified Stripe event JSON and updates DB.
@@ -53,11 +53,11 @@ func (s *BillingService) ApplyStripeEvent(ctx context.Context, raw []byte) error
 		if err := json.Unmarshal(wrap.Object, &sub); err != nil {
 			return err
 		}
-		orgID, err := s.org.GetIDByStripeCustomer(ctx, sub.Customer)
+		campainID, err := s.campain.GetIDByStripeCustomer(ctx, sub.Customer)
 		if err != nil {
 			return err
 		}
-		if orgID == nil {
+		if campainID == nil {
 			return fmt.Errorf("unknown stripe customer %s", sub.Customer)
 		}
 		priceID := ""
@@ -74,7 +74,7 @@ func (s *BillingService) ApplyStripeEvent(ctx context.Context, raw []byte) error
 		if st == "canceled" || st == "unpaid" {
 			st = "canceled"
 		}
-		return s.sub.UpsertByStripe(ctx, *orgID, planKey, sub.ID, st, periodEnd)
+		return s.sub.UpsertByStripe(ctx, *campainID, planKey, sub.ID, st, periodEnd)
 	case "checkout.session.completed":
 		var wrap struct {
 			Object json.RawMessage `json:"object"`
@@ -92,7 +92,7 @@ func (s *BillingService) ApplyStripeEvent(ctx context.Context, raw []byte) error
 		if sess.ClientReferenceID != "" && sess.Customer != "" {
 			id, err := uuid.Parse(sess.ClientReferenceID)
 			if err == nil {
-				return s.org.UpdateStripeCustomer(ctx, id, sess.Customer)
+				return s.campain.UpdateStripeCustomer(ctx, id, sess.Customer)
 			}
 		}
 		return nil

@@ -2,7 +2,7 @@
 -- Usage:
 --   psql "$DATABASE_URL" -f backend/seeds/demo_campaigns.sql
 
-INSERT INTO organizations (name, slug, discovery_enabled, approval_mode)
+INSERT INTO campains (name, slug, discovery_enabled, approval_mode)
 VALUES
   ('Athena Wellness Spring Campaign', 'athena-wellness', true, 'request_to_join'),
   ('Neon Gadgets Creator Campaign', 'neon-gadgets', true, 'open'),

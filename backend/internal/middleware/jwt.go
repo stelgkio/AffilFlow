@@ -13,7 +13,7 @@ func AffilFlowJWT(cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if cfg.JWTSkipValidation {
 			c.Locals(LocalUserID, "dev-user")
-			c.Locals(LocalRoles, []string{"admin", "affiliate"})
+			c.Locals(LocalRoles, []string{"merchant", "affiliate"})
 			return c.Next()
 		}
 

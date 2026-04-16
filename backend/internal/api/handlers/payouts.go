@@ -5,9 +5,9 @@ import (
 	"github.com/stelgkio/affilflow/backend/pkg/response"
 )
 
-// PayoutRun POST /api/v1/payouts/run (admin) — batch approved commissions to Stripe Connect / PayPal.
+// PayoutRun POST /api/v1/payouts/run (merchant) — batch approved commissions to Stripe Connect / PayPal.
 //
-// @Summary Run affiliate payouts (admin)
+// @Summary Run affiliate payouts (merchant)
 // @Tags payouts
 // @Security BearerAuth
 // @Produce json

@@ -11,18 +11,18 @@ import (
 
 // DirectoryPrograms GET /api/v1/directory/programs
 func (h *Handlers) DirectoryPrograms(c *fiber.Ctx) error {
-	list, err := h.Org.ListDiscoverable(c.UserContext())
+	list, err := h.Campain.ListDiscoverable(c.UserContext())
 	if err != nil {
 		return err
 	}
 	return response.JSON(c, fiber.StatusOK, list)
 }
 
-// DirectoryApply POST /api/v1/directory/programs/:orgId/apply
+// DirectoryApply POST /api/v1/directory/programs/:campainId/apply
 func (h *Handlers) DirectoryApply(c *fiber.Ctx) error {
-	orgID, err := uuid.Parse(c.Params("orgId"))
+	campainID, err := uuid.Parse(c.Params("campainId"))
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid organization id")
+		return fiber.NewError(fiber.StatusBadRequest, "invalid campain id")
 	}
 	uid, _ := c.Locals(middleware.LocalUserID).(string)
 	if uid == "" {
@@ -32,7 +32,7 @@ func (h *Handlers) DirectoryApply(c *fiber.Ctx) error {
 		Email *string `json:"email"`
 	}
 	_ = c.BodyParser(&body)
-	if err := h.Discovery.Apply(c.UserContext(), orgID, uid, body.Email); err != nil {
+	if err := h.Discovery.Apply(c.UserContext(), campainID, uid, body.Email); err != nil {
 		msg := err.Error()
 		status := fiber.StatusBadRequest
 		code := "apply_failed"
